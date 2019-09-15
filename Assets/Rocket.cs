@@ -8,27 +8,31 @@ public class Rocket : MonoBehaviour
 
     Rigidbody rigidBody;
     AudioSource audioSource;
-    bool m_Play;
-    bool m_ToggleChange;
+
+    [SerializeField] float rcsThrust = 100f;
+    [SerializeField] float upThrust = 1000f;
+
     // Start is called before the first frame update
     void Start()
     {
         rigidBody = GetComponent<Rigidbody>();
         audioSource = GetComponent<AudioSource>();
-        m_Play = true;
     }
 
     // Update is called once per frame
     void Update()
     {
-        ProcessInput();
+        Thrust();
+        Rotate();
     }
 
-    private void ProcessInput()
+    private void Thrust()
     {
         if (Input.GetKey(KeyCode.Space))
         {
-            rigidBody.AddRelativeForce(Vector3.up*Time.deltaTime);
+            float upThrustThisFrame = upThrust * Time.deltaTime;
+
+            rigidBody.AddRelativeForce(Vector3.up * upThrustThisFrame);
             if (!audioSource.isPlaying)
             {
                 audioSource.Play();
@@ -38,16 +42,40 @@ public class Rocket : MonoBehaviour
         {
             audioSource.Stop();
         }
-        
-        if(Input.GetKey(KeyCode.A))
+    }
+
+    private void Rotate()
+    {
+        rigidBody.freezeRotation = true; //We freeze rotation to take manual control of it
+
+        float rotationThisFrame = rcsThrust * Time.deltaTime;
+
+        if (Input.GetKey(KeyCode.A))
         {
-            transform.Rotate(Vector3.forward * Time.deltaTime*180);
+            transform.Rotate(Vector3.forward * rotationThisFrame);
         }
         else if (Input.GetKey(KeyCode.D))
         {
-            transform.Rotate(-(Vector3.forward) * Time.deltaTime*180);
-
+            transform.Rotate(-(Vector3.forward) * rotationThisFrame);
         }
 
+        rigidBody.freezeRotation = false; //Resume physics control on rotation
     }
+
+
+    void OnCollisionEnter(Collision collision)
+    {
+        switch(collision.gameObject.tag)
+        {
+            case "Friendly":
+                //Do nothing
+                print("OK");
+                break;
+            default:
+                print("DEAD");
+                //Kill player
+                break;
+        }
+    }
+
 }
