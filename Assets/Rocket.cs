@@ -10,6 +10,16 @@ public class Rocket : MonoBehaviour
     [SerializeField] float rcsThrust = 100f;
     [SerializeField] float upThrust = 1000f;
 
+    [SerializeField] float levelLoadDelay = 2f;
+
+    [SerializeField] AudioClip mainEngine;
+    [SerializeField] AudioClip deathSound;
+    [SerializeField] AudioClip winJingle;
+
+    [SerializeField] ParticleSystem thrustParticles;
+    [SerializeField] ParticleSystem deathParticles;
+    [SerializeField] ParticleSystem winParticles;
+
     enum State { Alive, Transcending, Dying};
     State state = State.Alive;
 
@@ -25,30 +35,36 @@ public class Rocket : MonoBehaviour
     {
         if (state == State.Alive)
         {
-            Thrust();
-            Rotate();
+            RespondToThrustInput();
+            ResopndToRotateInput();
         }
     }
 
-    private void Thrust()
+    private void RespondToThrustInput()
     {
         if (Input.GetKey(KeyCode.Space))
         {
-            float upThrustThisFrame = upThrust * Time.deltaTime;
-
-            rigidBody.AddRelativeForce(Vector3.up * upThrustThisFrame);
-            if (!audioSource.isPlaying)
-            {
-                audioSource.Play();
-            }
+            ApplyThrust();
         }
         else
         {
             audioSource.Stop();
+            thrustParticles.Stop();
         }
     }
 
-    private void Rotate()
+    private void ApplyThrust()
+    {
+        float upThrustThisFrame = upThrust * Time.deltaTime;
+        rigidBody.AddRelativeForce(Vector3.up * upThrustThisFrame);
+        if (!audioSource.isPlaying)
+        {
+            audioSource.PlayOneShot(mainEngine);
+            thrustParticles.Play();
+        }
+    }
+
+    private void ResopndToRotateInput()
     {
         rigidBody.freezeRotation = true; //We freeze rotation to take manual control of it
 
@@ -74,16 +90,35 @@ public class Rocket : MonoBehaviour
         switch (collision.gameObject.tag)
         {
             case "Friendly":
+                //Do nothing
                 break;
             case "Finish":
-                state = State.Transcending;
-                Invoke("LoadNextScene", 2f);
+                StartWinSequence();
                 break;
             default:
-                state = State.Dying;
-                Invoke("RespawnScene", 1f);
+                StartDeathSeuence();
                 break;
         }
+    }
+
+    private void StartDeathSeuence()
+    {
+        state = State.Dying;
+        audioSource.Stop();
+        thrustParticles.Stop();
+        audioSource.PlayOneShot(deathSound);
+        deathParticles.Play();
+        Invoke("RespawnScene", levelLoadDelay);
+    }
+
+    private void StartWinSequence()
+    {
+        state = State.Transcending;
+        audioSource.Stop();
+        thrustParticles.Stop();
+        audioSource.PlayOneShot(winJingle);
+        winParticles.Play();
+        Invoke("LoadNextScene", levelLoadDelay);
     }
 
     private void RespawnScene()
@@ -91,7 +126,7 @@ public class Rocket : MonoBehaviour
         SceneManager.LoadScene(0);
     }
 
-    private static void LoadNextScene()
+    private void LoadNextScene()
     {
         SceneManager.LoadScene(1);
     }
